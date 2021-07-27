@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+using System;using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,7 +25,8 @@ namespace MudBlazor
         private double _toolbarContentSize;
         private double _allTabsSize;
         private double _scrollPosition;
-
+        private double _dragStartX;
+        private double _dragStartY;
 
         [CascadingParameter] public bool RightToLeft { get; set; }
 
@@ -337,6 +337,106 @@ namespace MudBlazor
             }
         }
 
+        /// <summary>
+        /// Get the index of the source and destination panel of panel dragging action.
+        /// </summary>
+        private (int, int) GetDragPanelSrcDstIndex(double endX, double endY, double panelSize)
+        {
+            double targetPos = Position switch {
+                Position.Top or Position.Bottom => endX,
+                _ => endY
+            };
+
+            double fromPos = Position switch {
+                Position.Top or Position.Bottom => _dragStartX,
+                _ => _dragStartY
+            };
+
+            BoundingClientRect rect = GetClientBoundingRect(_panels.First().PanelRef);
+            double startPos = Position switch {
+                Position.Top or Position.Bottom => rect.X,
+                _ => rect.Y
+            };
+
+            Console.WriteLine($"startPos: {startPos}, fromPos: {fromPos}, targetPos: {targetPos}");
+
+            int fromIdx = (int)((fromPos - startPos) / panelSize);
+            int targetIdx = (int)((targetPos - startPos) / panelSize);
+
+            return (fromIdx, targetIdx);
+        }
+
+        private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
+        {
+            _dragStartX = ev.ClientX;
+            _dragStartY = ev.ClientY;
+
+            Console.WriteLine($"Start dragging: {panel.Text}");
+
+            Console.WriteLine("On Drag Start:");
+            _panels.ForEach(o => Console.Write($"{o.Text} "));
+            Console.WriteLine("");
+        }
+
+        private void OnDragEnd(MudTabPanel panel, MouseEventArgs ev)
+        {
+            double endX = ev.ClientX;
+            double endY = ev.ClientY;
+
+            double size = GetPanelLength(panel);
+
+            (int src, int dst) = GetDragPanelSrcDstIndex(endX, endY, size);
+
+            Console.WriteLine($"src: {src}, dst:{dst}");
+
+            // 0 1 2 3 4
+            //
+            // a b c d e
+            // |_____^
+            // b c d d e
+            // b c d a e
+            if (src < dst)
+            {
+                ElementReference reference;
+                MudTabPanel tmp = _panels[src];
+                for (int i = src; i != dst; i++)
+                {
+                    reference = _panels[i].PanelRef;
+                    _panels[i] = _panels[i + 1];
+                    _panels[i].PanelRef = reference;
+                }
+                reference = _panels[dst].PanelRef;
+                _panels[dst] = tmp;
+                _panels[dst].PanelRef = reference;
+            }
+            // 0 1 2 3 4
+            //
+            // a b c d e
+            //   ^_____|
+            // a b b c d
+            // a b e c d
+            else if (src > dst)
+            {
+                ElementReference reference;
+                MudTabPanel tmp = _panels[src];
+                for (int i = src; i != dst; i--)
+                {
+                    reference = _panels[i].PanelRef;
+                    _panels[i] = _panels[i - 1];
+                    _panels[i].PanelRef = reference;
+                }
+                reference = _panels[dst + 1].PanelRef;
+                _panels[dst + 1] = tmp;
+                _panels[dst + 1].PanelRef = reference;
+            }
+
+            StateHasChanged();
+
+            Console.WriteLine("After Drag End:");
+            _panels.ForEach(o => Console.Write($"{o.Text} "));
+            Console.WriteLine("");
+        }
+
         #endregion
 
         #region Style and classes
@@ -509,6 +609,11 @@ namespace MudBlazor
             Position.Top or Position.Bottom => _resizeObserver.GetWidth(reference),
             _ => _resizeObserver.GetHeight(reference)
         };
+
+        private BoundingClientRect GetClientBoundingRect(ElementReference reference)
+        {
+            return _resizeObserver.GetSizeInfo(reference);
+        }
 
         private double GetLengthOfPanelItems(MudTabPanel panel)
         {
