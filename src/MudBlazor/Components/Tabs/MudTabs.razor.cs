@@ -28,12 +28,9 @@ namespace MudBlazor
 
         MudTabPanel _draggedPanel;
         MudTabPanel _dragOverPanel;
-        double _draggedPanelSize = 0;
-        private double _dragStartX;
-        private double _dragStartY;
+        private double _dragStartPos;
+        private double _dragOffset;
         private bool _isDragging = false;
-        private double _dragOffsetX = 0;
-        private double _dragOffsetY = 0;
         private int _dragSide = 0;
 
         [CascadingParameter] public bool RightToLeft { get; set; }
@@ -350,10 +347,15 @@ namespace MudBlazor
             return System.Text.Json.JsonSerializer.Serialize(reference);
         }
 
+        private int GetPanelIndexFromClientPos(double pos, double panelSize)
+        {
+            return (int)((pos - _tabsOriginPosition));
+        }
+
         /// <summary>
         /// Get the index of the source and destination panel of panel dragging action.
         /// </summary>
-        private (int, int, int) GetDragPanelSrcDstIndex(double endX, double endY, double panelSize, bool isDisplaced)
+        private (int, int, int) GetDragPanelSrcDstIndex(double dstPos, double panelSize, bool isDisplaced)
         {
             double offset = 0;
             if (isDisplaced)
@@ -361,15 +363,8 @@ namespace MudBlazor
                 offset = panelSize;
             }
 
-            double targetPos = Position switch {
-                Position.Top or Position.Bottom => endX,
-                _ => endY
-            };
-
-            double fromPos = Position switch {
-                Position.Top or Position.Bottom => _dragStartX,
-                _ => _dragStartY
-            };
+            double targetPos = dstPos;
+            double fromPos = _dragStartPos;
 
             if (isDisplaced)
             {
@@ -444,9 +439,11 @@ namespace MudBlazor
         private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
         {
             _draggedPanel = panel;
-            _draggedPanelSize = GetPanelLength(_draggedPanel);
-            _dragStartX = ev.ClientX;
-            _dragStartY = ev.ClientY;
+            _dragStartPos = Position switch
+            {
+                Position.Top or Position.Bottom => ev.ClientX,
+                _ => ev.ClientY
+            };
             _isDragging = true;
         }
 
@@ -454,9 +451,19 @@ namespace MudBlazor
         {
             if (_isDragging)
             {
-                _dragOffsetX = ev.ClientX - _dragStartX;
+                _dragOffset = Position switch
+                {
+                    Position.Top or Position.Bottom => ev.ClientX - _dragStartPos,
+                    _ => ev.ClientY - _dragStartPos
+                };
 
-                (int src, int dst, int side) = GetDragPanelSrcDstIndex(ev.ClientX, ev.ClientY, GetPanelLength(panel), true);
+                double dstPos = Position switch
+                {
+                    Position.Top or Position.Bottom => ev.ClientX,
+                    _ => ev.ClientY
+                };
+
+                (int src, int dst, int side) = GetDragPanelSrcDstIndex(dstPos, GetPanelLength(panel), true);
 
                 if (src != dst)
                 {
@@ -468,15 +475,18 @@ namespace MudBlazor
 
         private void OnDragEnd(MudTabPanel panel, MouseEventArgs ev)
         {
-            double endX = ev.ClientX;
-            double endY = ev.ClientY;
             _isDragging = false;
-            _dragOffsetX = 0;
-            _dragOffsetY = 0;
+            _dragOffset = 0;
 
             double size = GetPanelLength(panel);
 
-            (int src, int dst, int side) = GetDragPanelSrcDstIndex(endX, endY, size, true);
+            double dstPos = Position switch
+            {
+                Position.Top or Position.Bottom => ev.ClientX,
+                _ => ev.ClientY
+            };
+
+            (int src, int dst, int side) = GetDragPanelSrcDstIndex(dstPos, size, true);
 
             MovePanel(src, dst, side);
 
@@ -602,11 +612,17 @@ namespace MudBlazor
             bool dragOverPanel = _isDragging && (panel == _dragOverPanel);
             bool dragToLeftSide = _dragSide < 0;
 
+            bool positionHorizontal = Position switch
+            {
+                Position.Top or Position.Bottom => true,
+                _ => false
+            };
+
             var tabStyle = new StyleBuilder()
             .AddStyle(panel.Style)
             .AddStyle("position", "absolute", draggingPanel)
-            .AddStyle("top", $"{_dragOffsetY}px", draggingPanel)
-            .AddStyle("left", $"{_dragOffsetX}px", draggingPanel)
+            .AddStyle("top", $"{_dragOffset}px", draggingPanel && !positionHorizontal)
+            .AddStyle("left", $"{_dragOffset}px", draggingPanel && positionHorizontal)
             .AddStyle("z-index", "10", draggingPanel)
             .AddStyle("background", "lightgray", dragOverPanel)
             .AddStyle("border-left", "2px solid blue", dragOverPanel && dragToLeftSide)
