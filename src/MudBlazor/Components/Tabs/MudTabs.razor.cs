@@ -32,7 +32,6 @@ namespace MudBlazor
         private double _dragOffset;
         private bool _isDragging = false;
         private int _dragSide = 0;
-        private System.Diagnostics.Stopwatch mouseDownTimer = new System.Diagnostics.Stopwatch();
 
         [CascadingParameter] public bool RightToLeft { get; set; }
 
@@ -329,11 +328,13 @@ namespace MudBlazor
 
         private void ActivatePanel(MudTabPanel panel, MouseEventArgs ev, bool ignoreDisabledState = false)
         {
-            mouseDownTimer.Stop();
-            if (mouseDownTimer.ElapsedMilliseconds > 300)
+            // Resolve conflict between onclick (this callback) and onmouse(down|move|up) events.
+            // If not resolved, panel hovered at the end of the dragging action
+            // will be activated by this event due to overlapping event.
+            if (_draggedPanel != null)
             {
-                mouseDownTimer.Reset();
-                return;
+                panel = _draggedPanel;
+                _draggedPanel = null;
             }
 
             if (!panel.Disabled || ignoreDisabledState)
@@ -437,11 +438,6 @@ namespace MudBlazor
             {
                 _panels[i].PanelRef = refs[i];
             }
-
-            if (ActivePanelIndex == src)
-            {
-                ActivePanelIndex = dst;
-            }
         }
 
         private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
@@ -453,7 +449,6 @@ namespace MudBlazor
                 _ => ev.ClientY
             };
             _isDragging = true;
-            mouseDownTimer.Start();
         }
 
         private void OnDragging(MudTabPanel panel, MouseEventArgs ev)
