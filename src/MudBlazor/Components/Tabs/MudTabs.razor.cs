@@ -1,5 +1,4 @@
-using System;using System.Collections.Generic;
-using System.Globalization;
+using System;using System.Collections.Generic;using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
@@ -28,11 +27,14 @@ namespace MudBlazor
         private double _scrollPosition;
 
         MudTabPanel _draggedPanel;
+        MudTabPanel _dragOverPanel;
+        double _draggedPanelSize = 0;
         private double _dragStartX;
         private double _dragStartY;
         private bool _isDragging = false;
         private double _dragOffsetX = 0;
         private double _dragOffsetY = 0;
+        private int _dragSide = 0;
 
         [CascadingParameter] public bool RightToLeft { get; set; }
 
@@ -279,17 +281,10 @@ namespace MudBlazor
 
         internal async Task RemovePanel(MudTabPanel tabPanel)
         {
-            Console.WriteLine($"Remove Panel: {tabPanel.Text}");
-
-            Console.Write("Before Remove: ");
-            _panels.ForEach(o => Console.Write($"{o.PanelRef.ToString()} "));
-            Console.WriteLine("");
-
             if (_isDisposed)
                 return;
 
             var index = _panels.IndexOf(tabPanel);
-            Console.WriteLine($"Removing index: {index}");
             var newIndex = index;
             if (ActivePanelIndex == index && index == _panels.Count - 1)
             {
@@ -314,10 +309,6 @@ namespace MudBlazor
             await _resizeObserver.Unobserve(tabPanel.PanelRef);
             Rerender();
             StateHasChanged();
-
-            Console.Write("After Remove: ");
-            _panels.ForEach(o => Console.Write($"{o.Text} "));
-            Console.WriteLine("");
         }
 
         public void ActivatePanel(MudTabPanel panel, bool ignoreDisabledState = false)
@@ -362,7 +353,7 @@ namespace MudBlazor
         /// <summary>
         /// Get the index of the source and destination panel of panel dragging action.
         /// </summary>
-        private (int, int) GetDragPanelSrcDstIndex(double endX, double endY, double panelSize)
+        private (int, int, int) GetDragPanelSrcDstIndex(double endX, double endY, double panelSize)
         {
             double targetPos = Position switch {
                 Position.Top or Position.Bottom => endX,
@@ -374,55 +365,27 @@ namespace MudBlazor
                 _ => _dragStartY
             };
 
-            Console.WriteLine($"startPos: {_tabsOriginPosition}, fromPos: {fromPos}, targetPos: {targetPos}");
-
             int fromIdx = (int)((fromPos - _tabsOriginPosition) / panelSize);
             int targetIdx = (int)((targetPos - _tabsOriginPosition) / panelSize);
 
-            return (fromIdx, targetIdx);
+            double absTargetPos = _tabsOriginPosition + targetIdx * panelSize;
+            double mid = absTargetPos + (panelSize / 2.0);
+
+            int side = 0;
+            if (targetPos > absTargetPos && targetPos < mid)
+                side = -1;
+            else if (targetPos > mid && targetPos < (absTargetPos + panelSize))
+                side = +1;
+
+            fromIdx = Math.Clamp(fromIdx, 0, _panels.Count - 1);
+            targetIdx = Math.Clamp(targetIdx, 0, _panels.Count - 1);
+
+            return (fromIdx, targetIdx, side);
         }
-
-        private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
+        private void RepositionPanel(int src, int dst, int side)
         {
-            Console.WriteLine($"Start dragging: {panel.Text}");
-
-            _draggedPanel = panel;
-            _dragStartX = ev.ClientX;
-            _dragStartY = ev.ClientY;
-            _isDragging = true;
-
-            Console.Write("On Drag Start: ");
-            _panels.ForEach(o => Console.Write($"{o.Text} "));
-            Console.WriteLine("");
-        }
-
-        private void OnDragging(MudTabPanel panel, MouseEventArgs ev)
-        {
-            if (_isDragging)
-            {
-                _dragOffsetX = ev.ClientX - _dragStartX;
-            }
-        }
-
-        private void OnDragEnd(MudTabPanel panel, MouseEventArgs ev)
-        {
-            Console.WriteLine($"End dragging: {panel.Text}");
-
-            double endX = ev.ClientX;
-            double endY = ev.ClientY;
-            _isDragging = false;
-            _dragOffsetX = 0;
-            _dragOffsetY = 0;
-
-            double size = GetPanelLength(panel);
-
-            (int src, int dst) = GetDragPanelSrcDstIndex(endX, endY, size);
-
-            Console.WriteLine($"src: {src}, dst:{dst}");
-            foreach (var p in _panels)
-            {
-                Console.WriteLine($"{p.Text} ref: {RefStr(p.PanelRef)}");
-            }
+            if (src == dst)
+                return;
 
             List<ElementReference> refs = new List<ElementReference>();
             foreach (var p in _panels)
@@ -430,35 +393,29 @@ namespace MudBlazor
                 refs.Add(p.PanelRef);
             }
 
-            // 0 1 2 3 4
-            //
-            // a b c d e
-            // |_____^
-            // b c d d e
-            // b c d a e
+            MudTabPanel tmp = _panels[src];
+
             if (src < dst)
             {
-                MudTabPanel tmp = _panels[src];
+                if (side < 0)
+                    dst = Math.Max(dst - 1, 0);
+
                 for (int i = src; i != dst; i++)
                 {
                     _panels[i] = _panels[i + 1];
                 }
                 _panels[dst] = tmp;
             }
-            // 0 1 2 3 4
-            //
-            // a b c d e
-            //   ^_____|
-            // a b b c d
-            // a b e c d
             else if (src > dst)
             {
-                MudTabPanel tmp = _panels[src];
+                if (side > 0)
+                    dst = Math.Max(dst + 1, 0);
+
                 for (int i = src; i != dst; i--)
                 {
                     _panels[i] = _panels[i - 1];
                 }
-                _panels[dst + 1] = tmp;
+                _panels[dst] = tmp;
             }
 
             for (int i = 0; i != refs.Count; i++)
@@ -470,15 +427,46 @@ namespace MudBlazor
             {
                 ActivePanelIndex = dst;
             }
+        }
 
-            Console.Write("After Drag End: ");
-            _panels.ForEach(o => Console.Write($"{o.Text} "));
-            Console.WriteLine("");
+        private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
+        {
+            _draggedPanel = panel;
+            _draggedPanelSize = GetPanelLength(_draggedPanel);
+            _dragStartX = ev.ClientX;
+            _dragStartY = ev.ClientY;
+            _isDragging = true;
+        }
 
-            foreach (var p in _panels)
+        private void OnDragging(MudTabPanel panel, MouseEventArgs ev)
+        {
+            if (_isDragging)
             {
-                Console.WriteLine($"{p.Text} ref: {RefStr(p.PanelRef)}");
+                _dragOffsetX = ev.ClientX - _dragStartX;
+
+                (int src, int dst, int side) = GetDragPanelSrcDstIndex(ev.ClientX, ev.ClientY, GetPanelLength(panel));
+
+                if (src != dst)
+                {
+                    _dragOverPanel = _panels[dst];
+                    _dragSide = side;
+                }
             }
+        }
+
+        private void OnDragEnd(MudTabPanel panel, MouseEventArgs ev)
+        {
+            double endX = ev.ClientX;
+            double endY = ev.ClientY;
+            _isDragging = false;
+            _dragOffsetX = 0;
+            _dragOffsetY = 0;
+
+            double size = GetPanelLength(panel);
+
+            (int src, int dst, int side) = GetDragPanelSrcDstIndex(endX, endY, size);
+
+            RepositionPanel(src, dst, side);
 
             Rerender();
             StateHasChanged();
@@ -599,16 +587,17 @@ namespace MudBlazor
         string GetTabStyle(MudTabPanel panel)
         {
             bool draggingPanel = _isDragging && (panel == _draggedPanel);
-            string position = System.Math.Abs(_dragOffsetX) > GetPanelLength(panel) / 2.0 ?
-                "absolute" :
-                "relative";
+            bool dragOverPanel = _isDragging && (panel == _dragOverPanel);
+            bool dragToLeftSide = _dragSide < 0;
 
             var tabStyle = new StyleBuilder()
             .AddStyle(panel.Style)
-            .AddStyle("position", position, draggingPanel)
+            .AddStyle("position", "relative", draggingPanel)
             .AddStyle("top", $"{_dragOffsetY}px", draggingPanel)
             .AddStyle("left", $"{_dragOffsetX}px", draggingPanel)
             .AddStyle("z-index", "10", draggingPanel)
+            .AddStyle("border-left", "2px solid blue", dragOverPanel && dragToLeftSide)
+            .AddStyle("border-right", "2px solid blue", dragOverPanel && !dragToLeftSide)
             .Build();
 
             return tabStyle;
@@ -652,13 +641,11 @@ namespace MudBlazor
         {
             if (_panels.Count > 0)
             {
-                Console.WriteLine($"First tab text: {_panels.First().Text} ({RefStr(_panels.First().PanelRef)})");
                 BoundingClientRect rect = GetClientBoundingRect(_panels.First().PanelRef);
                 _tabsOriginPosition = Position switch {
                     Position.Top or Position.Bottom => rect.X,
                     _ => rect.Y
                 };
-                Console.WriteLine($"_tabsOriginPosition: {_tabsOriginPosition}");
             }
         }
 
