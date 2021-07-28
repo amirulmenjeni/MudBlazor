@@ -148,7 +148,7 @@ namespace MudBlazor.UnitTests.Components
             comp.FindAll("tr")[1].TextContent.Should().Be("No matching records found");
 
             // It should be equal to 3 = empty row string + header row + loading row
-            switchElement.Change(true); 
+            switchElement.Change(true);
             comp.FindAll("tr").Count.Should().Be(3);
             comp.FindAll("tr")[2].TextContent.Should().Be("Loading...");
         }
@@ -952,6 +952,38 @@ namespace MudBlazor.UnitTests.Components
         }
 
         /// <summary>
+        /// This test validates that when the CanCancel option is set to true and no SelectedItem has been defined, 
+        /// by clicking on another row, the previous row is no longer editable. Meaning there are always only 2 buttons
+        /// </summary>
+        [Test]
+        public async Task TableInlineEditCancel4Test()
+        {
+            // Get access to the test table
+            var comp = ctx.RenderComponent<TableInlineEditCancelNoSelectedItemTest>();
+
+            // List all the rows
+            var trs = comp.FindAll("tr");
+
+            // Click on the third row
+            trs[3].Click();
+
+            // How many buttons? It should be equal to 2. One for commit and one for cancel
+            comp.FindAll("button").Count.Should().Be(2);
+
+            // Click on the second row
+            trs[2].Click();
+
+            // How many buttons? It should always be equal to 2
+            comp.FindAll("button").Count.Should().Be(2);
+
+            // Click on the first row
+            trs[1].Click();
+
+            // How many buttons? It should always be equal to 2
+            comp.FindAll("button").Count.Should().Be(2);
+        }
+
+        /// <summary>
         /// Tests the grouping behavior and ensure that it won't break anything else.
         /// </summary>
         /// <returns></returns>
@@ -1012,7 +1044,7 @@ namespace MudBlazor.UnitTests.Components
                 InnerGroup = new TableGroupDefinition<TableGroupingTest.RacingCar>()
                 {
                     GroupName = "Brand",
-                    Selector = rc => rc.Brand 
+                    Selector = rc => rc.Brand
                 }
             };
             comp.Render();
@@ -1056,7 +1088,7 @@ namespace MudBlazor.UnitTests.Components
             tr.Length.Should().Be(29); // 1 table header + 8 category group rows (h + f) - LMP1 footer + 18 brands group rows (see line 915) - 2 brands LMP2 Header - 2 brands LMP1 footer + 9 car rows - 2 LMP1 car rows
             buttons[0].Click();
             tr = comp.FindAll("tr").ToArray();
-            tr.Length.Should().Be(36); 
+            tr.Length.Should().Be(36);
         }
     }
 }

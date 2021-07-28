@@ -257,6 +257,16 @@ namespace MudBlazor
         /// </summary>
         [Parameter] public bool Strict { get; set; }
 
+        /// <summary>
+        /// Show clear button.
+        /// </summary>
+        [Parameter] public bool Clearable { get; set; } = false;
+
+        /// <summary>
+        /// Button click event for clear button. Called after text and value has been cleared.
+        /// </summary>
+        [Parameter] public EventCallback<MouseEventArgs> OnClearButtonClick { get; set; }
+
         internal bool _isOpen;
 
         public string _currentIcon { get; set; }
@@ -271,6 +281,8 @@ namespace MudBlazor
                     SelectedValues.Add(value);
                 else
                     SelectedValues.Remove(value);
+
+                await SelectedValuesChanged.InvokeAsync(SelectedValues);
 
                 if (MultiSelectionTextFunc != null)
                 {
@@ -296,13 +308,14 @@ namespace MudBlazor
                     return;
                 }
 
+                await SelectedValuesChanged.InvokeAsync(SelectedValues);
+
                 await SetValueAsync(value);
                 SelectedValues.Clear();
                 SelectedValues.Add(value);
             }
 
             StateHasChanged();
-            await SelectedValuesChanged.InvokeAsync(SelectedValues);
         }
 
         public void ToggleMenu()
