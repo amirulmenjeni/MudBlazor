@@ -393,7 +393,8 @@ namespace MudBlazor
 
             return (fromIdx, targetIdx, side);
         }
-        private void RepositionPanel(int src, int dst, int side)
+
+        private void MovePanel(int src, int dst, int side)
         {
             if (src == dst)
                 return;
@@ -477,7 +478,7 @@ namespace MudBlazor
 
             (int src, int dst, int side) = GetDragPanelSrcDstIndex(endX, endY, size, true);
 
-            RepositionPanel(src, dst, side);
+            MovePanel(src, dst, side);
 
             Rerender();
             StateHasChanged();
