@@ -32,6 +32,7 @@ namespace MudBlazor
         private double _dragOffset;
         private bool _isDragging = false;
         private int _dragSide = 0;
+        private System.Diagnostics.Stopwatch mouseDownTimer = new System.Diagnostics.Stopwatch();
 
         [CascadingParameter] public bool RightToLeft { get; set; }
 
@@ -328,6 +329,13 @@ namespace MudBlazor
 
         private void ActivatePanel(MudTabPanel panel, MouseEventArgs ev, bool ignoreDisabledState = false)
         {
+            mouseDownTimer.Stop();
+            if (mouseDownTimer.ElapsedMilliseconds > 300)
+            {
+                mouseDownTimer.Reset();
+                return;
+            }
+
             if (!panel.Disabled || ignoreDisabledState)
             {
                 ActivePanelIndex = _panels.IndexOf(panel);
@@ -445,6 +453,7 @@ namespace MudBlazor
                 _ => ev.ClientY
             };
             _isDragging = true;
+            mouseDownTimer.Start();
         }
 
         private void OnDragging(MudTabPanel panel, MouseEventArgs ev)
