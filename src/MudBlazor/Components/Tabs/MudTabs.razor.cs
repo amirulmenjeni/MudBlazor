@@ -26,8 +26,13 @@ namespace MudBlazor
         private double _allTabsSize;
         private double _tabsOriginPosition;
         private double _scrollPosition;
+
+        MudTabPanel _draggedPanel;
         private double _dragStartX;
         private double _dragStartY;
+        private bool _isDragging = false;
+        private double _dragOffsetX = 0;
+        private double _dragOffsetY = 0;
 
         [CascadingParameter] public bool RightToLeft { get; set; }
 
@@ -379,20 +384,35 @@ namespace MudBlazor
 
         private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
         {
+            Console.WriteLine($"Start dragging: {panel.Text}");
+
+            _draggedPanel = panel;
             _dragStartX = ev.ClientX;
             _dragStartY = ev.ClientY;
-
-            Console.WriteLine($"Start dragging: {panel.Text}");
+            _isDragging = true;
 
             Console.Write("On Drag Start: ");
             _panels.ForEach(o => Console.Write($"{o.Text} "));
             Console.WriteLine("");
         }
 
+        private void OnDragging(MudTabPanel panel, MouseEventArgs ev)
+        {
+            if (_isDragging)
+            {
+                _dragOffsetX = ev.ClientX - _dragStartX;
+            }
+        }
+
         private void OnDragEnd(MudTabPanel panel, MouseEventArgs ev)
         {
+            Console.WriteLine($"End dragging: {panel.Text}");
+
             double endX = ev.ClientX;
             double endY = ev.ClientY;
+            _isDragging = false;
+            _dragOffsetX = 0;
+            _dragOffsetY = 0;
 
             double size = GetPanelLength(panel);
 
@@ -578,8 +598,17 @@ namespace MudBlazor
 
         string GetTabStyle(MudTabPanel panel)
         {
+            bool draggingPanel = _isDragging && (panel == _draggedPanel);
+            string position = System.Math.Abs(_dragOffsetX) > GetPanelLength(panel) / 2.0 ?
+                "absolute" :
+                "relative";
+
             var tabStyle = new StyleBuilder()
             .AddStyle(panel.Style)
+            .AddStyle("position", position, draggingPanel)
+            .AddStyle("top", $"{_dragOffsetY}px", draggingPanel)
+            .AddStyle("left", $"{_dragOffsetX}px", draggingPanel)
+            .AddStyle("z-index", "10", draggingPanel)
             .Build();
 
             return tabStyle;
