@@ -353,8 +353,14 @@ namespace MudBlazor
         /// <summary>
         /// Get the index of the source and destination panel of panel dragging action.
         /// </summary>
-        private (int, int, int) GetDragPanelSrcDstIndex(double endX, double endY, double panelSize)
+        private (int, int, int) GetDragPanelSrcDstIndex(double endX, double endY, double panelSize, bool isDisplaced)
         {
+            double offset = 0;
+            if (isDisplaced)
+            {
+                offset = panelSize;
+            }
+
             double targetPos = Position switch {
                 Position.Top or Position.Bottom => endX,
                 _ => endY
@@ -364,6 +370,11 @@ namespace MudBlazor
                 Position.Top or Position.Bottom => _dragStartX,
                 _ => _dragStartY
             };
+
+            if (isDisplaced)
+            {
+                targetPos = fromPos < targetPos ? targetPos + offset : targetPos;
+            }
 
             int fromIdx = (int)((fromPos - _tabsOriginPosition) / panelSize);
             int targetIdx = (int)((targetPos - _tabsOriginPosition) / panelSize);
@@ -444,7 +455,7 @@ namespace MudBlazor
             {
                 _dragOffsetX = ev.ClientX - _dragStartX;
 
-                (int src, int dst, int side) = GetDragPanelSrcDstIndex(ev.ClientX, ev.ClientY, GetPanelLength(panel));
+                (int src, int dst, int side) = GetDragPanelSrcDstIndex(ev.ClientX, ev.ClientY, GetPanelLength(panel), true);
 
                 if (src != dst)
                 {
@@ -464,7 +475,7 @@ namespace MudBlazor
 
             double size = GetPanelLength(panel);
 
-            (int src, int dst, int side) = GetDragPanelSrcDstIndex(endX, endY, size);
+            (int src, int dst, int side) = GetDragPanelSrcDstIndex(endX, endY, size, true);
 
             RepositionPanel(src, dst, side);
 
@@ -592,10 +603,11 @@ namespace MudBlazor
 
             var tabStyle = new StyleBuilder()
             .AddStyle(panel.Style)
-            .AddStyle("position", "relative", draggingPanel)
+            .AddStyle("position", "absolute", draggingPanel)
             .AddStyle("top", $"{_dragOffsetY}px", draggingPanel)
             .AddStyle("left", $"{_dragOffsetX}px", draggingPanel)
             .AddStyle("z-index", "10", draggingPanel)
+            .AddStyle("background", "lightgray", dragOverPanel)
             .AddStyle("border-left", "2px solid blue", dragOverPanel && dragToLeftSide)
             .AddStyle("border-right", "2px solid blue", dragOverPanel && !dragToLeftSide)
             .Build();
