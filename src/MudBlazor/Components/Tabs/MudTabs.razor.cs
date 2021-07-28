@@ -349,7 +349,7 @@ namespace MudBlazor
 
         private int GetPanelIndexFromClientPos(double pos, double panelSize)
         {
-            return (int)((pos - _tabsOriginPosition));
+            return (int)((pos - _tabsOriginPosition) / panelSize);
         }
 
         /// <summary>
@@ -371,8 +371,8 @@ namespace MudBlazor
                 targetPos = fromPos < targetPos ? targetPos + offset : targetPos;
             }
 
-            int fromIdx = (int)((fromPos - _tabsOriginPosition) / panelSize);
-            int targetIdx = (int)((targetPos - _tabsOriginPosition) / panelSize);
+            int fromIdx = GetPanelIndexFromClientPos(fromPos, panelSize);
+            int targetIdx = GetPanelIndexFromClientPos(targetPos, panelSize);
 
             double absTargetPos = _tabsOriginPosition + targetIdx * panelSize;
             double mid = absTargetPos + (panelSize / 2.0);
