@@ -24,6 +24,7 @@ namespace MudBlazor
         private double _position;
         private double _toolbarContentSize;
         private double _allTabsSize;
+        private double _tabsOriginPosition;
         private double _scrollPosition;
         private double _dragStartX;
         private double _dragStartY;
@@ -273,10 +274,17 @@ namespace MudBlazor
 
         internal async Task RemovePanel(MudTabPanel tabPanel)
         {
+            Console.WriteLine($"Remove Panel: {tabPanel.Text}");
+
+            Console.Write("Before Remove: ");
+            _panels.ForEach(o => Console.Write($"{o.PanelRef.ToString()} "));
+            Console.WriteLine("");
+
             if (_isDisposed)
                 return;
 
             var index = _panels.IndexOf(tabPanel);
+            Console.WriteLine($"Removing index: {index}");
             var newIndex = index;
             if (ActivePanelIndex == index && index == _panels.Count - 1)
             {
@@ -301,6 +309,10 @@ namespace MudBlazor
             await _resizeObserver.Unobserve(tabPanel.PanelRef);
             Rerender();
             StateHasChanged();
+
+            Console.Write("After Remove: ");
+            _panels.ForEach(o => Console.Write($"{o.Text} "));
+            Console.WriteLine("");
         }
 
         public void ActivatePanel(MudTabPanel panel, bool ignoreDisabledState = false)
@@ -337,6 +349,11 @@ namespace MudBlazor
             }
         }
 
+        private string RefStr(ElementReference reference)
+        {
+            return System.Text.Json.JsonSerializer.Serialize(reference);
+        }
+
         /// <summary>
         /// Get the index of the source and destination panel of panel dragging action.
         /// </summary>
@@ -352,16 +369,10 @@ namespace MudBlazor
                 _ => _dragStartY
             };
 
-            BoundingClientRect rect = GetClientBoundingRect(_panels.First().PanelRef);
-            double startPos = Position switch {
-                Position.Top or Position.Bottom => rect.X,
-                _ => rect.Y
-            };
+            Console.WriteLine($"startPos: {_tabsOriginPosition}, fromPos: {fromPos}, targetPos: {targetPos}");
 
-            Console.WriteLine($"startPos: {startPos}, fromPos: {fromPos}, targetPos: {targetPos}");
-
-            int fromIdx = (int)((fromPos - startPos) / panelSize);
-            int targetIdx = (int)((targetPos - startPos) / panelSize);
+            int fromIdx = (int)((fromPos - _tabsOriginPosition) / panelSize);
+            int targetIdx = (int)((targetPos - _tabsOriginPosition) / panelSize);
 
             return (fromIdx, targetIdx);
         }
@@ -373,7 +384,7 @@ namespace MudBlazor
 
             Console.WriteLine($"Start dragging: {panel.Text}");
 
-            Console.WriteLine("On Drag Start:");
+            Console.Write("On Drag Start: ");
             _panels.ForEach(o => Console.Write($"{o.Text} "));
             Console.WriteLine("");
         }
@@ -388,6 +399,16 @@ namespace MudBlazor
             (int src, int dst) = GetDragPanelSrcDstIndex(endX, endY, size);
 
             Console.WriteLine($"src: {src}, dst:{dst}");
+            foreach (var p in _panels)
+            {
+                Console.WriteLine($"{p.Text} ref: {RefStr(p.PanelRef)}");
+            }
+
+            List<ElementReference> refs = new List<ElementReference>();
+            foreach (var p in _panels)
+            {
+                refs.Add(p.PanelRef);
+            }
 
             // 0 1 2 3 4
             //
@@ -397,17 +418,12 @@ namespace MudBlazor
             // b c d a e
             if (src < dst)
             {
-                ElementReference reference;
                 MudTabPanel tmp = _panels[src];
                 for (int i = src; i != dst; i++)
                 {
-                    reference = _panels[i].PanelRef;
                     _panels[i] = _panels[i + 1];
-                    _panels[i].PanelRef = reference;
                 }
-                reference = _panels[dst].PanelRef;
                 _panels[dst] = tmp;
-                _panels[dst].PanelRef = reference;
             }
             // 0 1 2 3 4
             //
@@ -417,24 +433,35 @@ namespace MudBlazor
             // a b e c d
             else if (src > dst)
             {
-                ElementReference reference;
                 MudTabPanel tmp = _panels[src];
                 for (int i = src; i != dst; i--)
                 {
-                    reference = _panels[i].PanelRef;
                     _panels[i] = _panels[i - 1];
-                    _panels[i].PanelRef = reference;
                 }
-                reference = _panels[dst + 1].PanelRef;
                 _panels[dst + 1] = tmp;
-                _panels[dst + 1].PanelRef = reference;
             }
 
-            StateHasChanged();
+            for (int i = 0; i != refs.Count; i++)
+            {
+                _panels[i].PanelRef = refs[i];
+            }
 
-            Console.WriteLine("After Drag End:");
+            if (ActivePanelIndex == src)
+            {
+                ActivePanelIndex = dst;
+            }
+
+            Console.Write("After Drag End: ");
             _panels.ForEach(o => Console.Write($"{o.Text} "));
             Console.WriteLine("");
+
+            foreach (var p in _panels)
+            {
+                Console.WriteLine($"{p.Text} ref: {RefStr(p.PanelRef)}");
+            }
+
+            Rerender();
+            StateHasChanged();
         }
 
         #endregion
@@ -573,6 +600,7 @@ namespace MudBlazor
             CenterScrollPositionAroundSelectedItem();
             SetSliderState();
             SetScrollabilityStates();
+            GetTabsOriginPosition();
         }
 
         private async void OnResized(IDictionary<ElementReference, BoundingClientRect> changes)
@@ -590,6 +618,20 @@ namespace MudBlazor
         }
 
         private void GetToolbarContentSize() => _toolbarContentSize = GetRelevantSize(_tabsContentSize);
+
+        private void GetTabsOriginPosition()
+        {
+            if (_panels.Count > 0)
+            {
+                Console.WriteLine($"First tab text: {_panels.First().Text} ({RefStr(_panels.First().PanelRef)})");
+                BoundingClientRect rect = GetClientBoundingRect(_panels.First().PanelRef);
+                _tabsOriginPosition = Position switch {
+                    Position.Top or Position.Bottom => rect.X,
+                    _ => rect.Y
+                };
+                Console.WriteLine($"_tabsOriginPosition: {_tabsOriginPosition}");
+            }
+        }
 
         private void GetAllTabsSize()
         {
