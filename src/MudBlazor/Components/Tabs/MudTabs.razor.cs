@@ -615,6 +615,9 @@ namespace MudBlazor
             bool draggingPanel = _isDragging && (panel == _draggedPanel);
             bool dragOverPanel = _isDragging && (panel == _dragOverPanel);
             bool dragToLeftSide = _dragSide < 0;
+            string position = Math.Abs(_dragOffset) > (GetPanelLength(panel) / 4.0) ?
+                "absolute" :
+                "relative";
 
             bool positionHorizontal = Position switch
             {
@@ -624,7 +627,7 @@ namespace MudBlazor
 
             var tabStyle = new StyleBuilder()
             .AddStyle(panel.Style)
-            .AddStyle("position", "absolute", draggingPanel)
+            .AddStyle("position", position, draggingPanel)
             .AddStyle("top", $"{_dragOffset}px", draggingPanel && !positionHorizontal)
             .AddStyle("left", $"{_dragOffset}px", draggingPanel && positionHorizontal)
             .AddStyle("z-index", "10", draggingPanel)
