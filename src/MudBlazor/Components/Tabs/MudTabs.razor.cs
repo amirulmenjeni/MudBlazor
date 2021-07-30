@@ -443,11 +443,7 @@ namespace MudBlazor
         private void OnDragStart(MudTabPanel panel, MouseEventArgs ev)
         {
             _draggedPanel = panel;
-            _dragStartPos = Position switch
-            {
-                Position.Top or Position.Bottom => ev.ClientX,
-                _ => ev.ClientY
-            };
+            _dragStartPos = GetRelevantPosition(ev.ClientX, ev.ClientY);
             _isDragging = true;
         }
 
@@ -461,11 +457,10 @@ namespace MudBlazor
                     _ => ev.ClientY - _dragStartPos
                 };
 
-                double dstPos = Position switch
-                {
-                    Position.Top or Position.Bottom => ev.ClientX,
-                    _ => ev.ClientY
-                };
+            if (_isDragging)
+            {
+                _dragOffset = GetRelevantPosition(ev.ClientX - _dragStartPos, ev.ClientY - _dragStartPos);
+                double dstPos = GetRelevantPosition(ev.ClientX, ev.ClientY);
 
                 (int src, int dst, int side) = GetDragPanelSrcDstIndex(dstPos, GetPanelLength(panel), true);
 
@@ -483,12 +478,7 @@ namespace MudBlazor
             _dragOffset = 0;
 
             double size = GetPanelLength(panel);
-
-            double dstPos = Position switch
-            {
-                Position.Top or Position.Bottom => ev.ClientX,
-                _ => ev.ClientY
-            };
+            double dstPos = GetRelevantPosition(ev.ClientX, ev.ClientY);
 
             (int src, int dst, int side) = GetDragPanelSrcDstIndex(dstPos, size, true);
 
@@ -677,11 +667,9 @@ namespace MudBlazor
         {
             if (_panels.Count > 0)
             {
-                BoundingClientRect rect = GetClientBoundingRect(_panels.First().PanelRef);
-                _tabsOriginPosition = Position switch {
-                    Position.Top or Position.Bottom => rect.X,
-                    _ => rect.Y
-                };
+                Console.WriteLine($"First panel: {_panels.First().Text}");
+                _tabsOriginPosition = GetRelevantPosition(_panels.First().PanelRef);
+                Console.WriteLine($"_tabsOriginPosition: {_tabsOriginPosition}");
             }
         }
 
@@ -704,11 +692,22 @@ namespace MudBlazor
             _ => _resizeObserver.GetHeight(reference)
         };
 
+        private double GetRelevantPosition(double x, double y) => Position switch
+        {
+            Position.Top or Position.Bottom or Position.Center => x,
+            _ => y
+        };
+
+        private double GetRelevantPosition(ElementReference reference)
+        {
+            BoundingClientRect rect = _resizeObserver.GetSizeInfo(reference);
+            return GetRelevantPosition(rect.X, rect.Y);
+        }
+
         private BoundingClientRect GetClientBoundingRect(ElementReference reference)
         {
             return _resizeObserver.GetSizeInfo(reference);
         }
-
         private double GetLengthOfPanelItems(MudTabPanel panel)
         {
             var value = 0.0;
