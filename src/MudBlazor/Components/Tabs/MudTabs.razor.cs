@@ -609,17 +609,11 @@ namespace MudBlazor
                 "absolute" :
                 "relative";
 
-            bool positionHorizontal = Position switch
-            {
-                Position.Top or Position.Bottom => true,
-                _ => false
-            };
-
             var tabStyle = new StyleBuilder()
             .AddStyle(panel.Style)
             .AddStyle("position", position, draggingPanel)
-            .AddStyle("top", $"{_dragOffset}px", draggingPanel && !positionHorizontal)
-            .AddStyle("left", $"{_dragOffset}px", draggingPanel && positionHorizontal)
+            .AddStyle("top", $"{_dragOffset}px", draggingPanel && IsVerticalTabs())
+            .AddStyle("left", $"{_dragOffset}px", draggingPanel && !IsVerticalTabs())
             .AddStyle("z-index", "10", draggingPanel)
             .AddStyle("background", "lightgray", dragOverPanel)
             .AddStyle("border-left", "2px solid blue", dragOverPanel && dragToLeftSide)
