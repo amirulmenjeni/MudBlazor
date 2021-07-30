@@ -664,7 +664,7 @@ namespace MudBlazor
             if (_panels.Count > 0)
             {
                 Console.WriteLine($"First panel: {_panels.First().Text}");
-                _tabsOriginPosition = GetRelevantPosition(_tabsContentSize);
+                _tabsOriginPosition = GetRelevantPosition(_panels.First().PanelRef);
                 Console.WriteLine($"_tabsOriginPosition: {_tabsOriginPosition}");
             }
         }
