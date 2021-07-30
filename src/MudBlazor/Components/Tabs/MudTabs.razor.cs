@@ -616,8 +616,10 @@ namespace MudBlazor
             .AddStyle("left", $"{_dragOffset}px", draggingPanel && !IsVerticalTabs())
             .AddStyle("z-index", "10", draggingPanel)
             .AddStyle("background", "lightgray", dragOverPanel)
-            .AddStyle("border-left", "2px solid blue", dragOverPanel && dragToLeftSide)
-            .AddStyle("border-right", "2px solid blue", dragOverPanel && !dragToLeftSide)
+            .AddStyle("border-left", "2px solid blue", !IsVerticalTabs() && dragOverPanel && dragToLeftSide)
+            .AddStyle("border-right", "2px solid blue", !IsVerticalTabs() && dragOverPanel && !dragToLeftSide)
+            .AddStyle("border-top", "2px solid blue", IsVerticalTabs() && dragOverPanel && dragToLeftSide)
+            .AddStyle("border-top", "2px solid blue", IsVerticalTabs() && dragOverPanel && dragToLeftSide)
             .Build();
 
             return tabStyle;
