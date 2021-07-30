@@ -451,14 +451,6 @@ namespace MudBlazor
         {
             if (_isDragging)
             {
-                _dragOffset = Position switch
-                {
-                    Position.Top or Position.Bottom => ev.ClientX - _dragStartPos,
-                    _ => ev.ClientY - _dragStartPos
-                };
-
-            if (_isDragging)
-            {
                 _dragOffset = GetRelevantPosition(ev.ClientX - _dragStartPos, ev.ClientY - _dragStartPos);
                 double dstPos = GetRelevantPosition(ev.ClientX, ev.ClientY);
 
