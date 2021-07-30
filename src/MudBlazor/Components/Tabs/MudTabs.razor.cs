@@ -682,7 +682,7 @@ namespace MudBlazor
 
         private double GetRelevantSize(ElementReference reference) => Position switch
         {
-            Position.Top or Position.Bottom => _resizeObserver.GetWidth(reference),
+            Position.Top or Position.Bottom or Position.Center => _resizeObserver.GetWidth(reference),
             _ => _resizeObserver.GetHeight(reference)
         };
 
