@@ -19,6 +19,7 @@ namespace MudBlazor
         private bool _nextButtonDisabled;
         private bool _showScrollButtons;
         private ElementReference _tabsContentSize;
+        private ElementReference _tabsWrapper;
         private double _size;
         private double _position;
         private double _toolbarContentSize;
@@ -655,9 +656,15 @@ namespace MudBlazor
         {
             if (_panels.Count > 0)
             {
-                Console.WriteLine($"First panel: {_panels.First().Text}");
-                _tabsOriginPosition = GetRelevantPosition(_panels.First().PanelRef);
-                Console.WriteLine($"_tabsOriginPosition: {_tabsOriginPosition}");
+                double firstPanelPos = GetRelevantPosition(_panels.First().PanelRef);
+                if (Centered && !IsVerticalTabs())
+                {
+                    _tabsOriginPosition = (GetRelevantSize(_tabsContentSize) - GetRelevantSize(_tabsWrapper)) / 2.0;
+                }
+                else
+                {
+                    _tabsOriginPosition = firstPanelPos;
+                }
             }
         }
 
