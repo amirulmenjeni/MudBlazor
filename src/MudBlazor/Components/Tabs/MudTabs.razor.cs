@@ -363,12 +363,6 @@ namespace MudBlazor
             if (src == dst)
                 return;
 
-            List<ElementReference> refs = new List<ElementReference>();
-            foreach (var p in _panels)
-            {
-                refs.Add(p.PanelRef);
-            }
-
             MudTabPanel tmp = _panels[src];
 
             if (src < dst)
@@ -388,9 +382,8 @@ namespace MudBlazor
                 _panels[dst] = tmp;
             }
 
-            for (int i = 0; i != refs.Count; i++)
+            for (int i = 0; i != _panels.Count; i++)
             {
-                _panels[i].PanelRef = refs[i];
                 _panels[i].Index = i;
             }
         }
