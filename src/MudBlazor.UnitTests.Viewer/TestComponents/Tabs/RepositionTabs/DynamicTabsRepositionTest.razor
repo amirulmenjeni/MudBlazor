@@ -27,8 +27,8 @@
 >
 	@foreach(var panel in _panels)
 	{
-		<MudTabPanel Text="@panel" @key=panel>
-            <RepositionTabsPanel PanelName="@panel" FirstRender="@((x) => _firstRenders.Add(x))"/>
+		<MudTabPanel Text="@panel.Text" ID="@panel.ID">
+            <RepositionTabsPanel PanelName="@panel.Text" FirstRender="@((x) => _firstRenders.Add(x))"/>
 		</MudTabPanel>
 	}
 </MudDynamicTabs>
@@ -50,27 +50,27 @@
     bool _isCentered = false;
     bool _isEnableRepositioning = true;
     bool _isKeepPanelsAlive = false;
+
     Position _position { get; set; } = Position.Top;
-    List<string> _panels = new List<string>();
+    List<(int ID, string Text)> _panels = new List<(int, string)>();
     List<string> _firstRenders = new List<string>();
 
     public Int32 AddClickCounter { get; private set; }
 
     protected override void OnInitialized()
     {
-        _panels = new List<string>() { "Panel 0", "Panel 1", "Panel 2" };
+        _panels = new List<(int, string)>() { (0, "Panel 0"), (1, "Panel 1"), (2, "Panel 2") };
         AddClickCounter = _panels.Count;
     }
 
     private void OnAddClicked()
     {
-        _panels.Add($"Panel {AddClickCounter}");
-        AddClickCounter++;
+        _panels.Add((++AddClickCounter, $"Panel {AddClickCounter}"));
     }
 
     private void OnCloseClicked(MudTabPanel panel)
     {
         Console.WriteLine($"Closing {panel.Text}");
-        _panels.Remove(panel.Text);
+        _panels.Remove(((int)panel.ID, panel.Text));
 	}
 }
