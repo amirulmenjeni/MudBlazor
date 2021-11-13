@@ -386,6 +386,8 @@ namespace MudBlazor
             {
                 _panels[i].Index = i;
             }
+
+            ActivePanelIndex = dst;
         }
 
         private void OnDragStart(MudTabPanel panel, DragEventArgs ev)
