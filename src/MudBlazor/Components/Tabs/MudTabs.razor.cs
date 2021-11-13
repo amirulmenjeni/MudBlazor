@@ -304,13 +304,13 @@ namespace MudBlazor
                 await ActivePanelIndexChanged.InvokeAsync(_activePanelIndex);
             }
 
-            if (index != newIndex)
+            _panels.Remove(tabPanel);
+            await _resizeObserver.Unobserve(tabPanel.PanelRef);
+
+            if (ActivePanelIndex == index && _panels.Count > 0)
             {
                 ActivePanelIndex = newIndex;
             }
-
-            _panels.Remove(tabPanel);
-            await _resizeObserver.Unobserve(tabPanel.PanelRef);
 
             for (int i = 0; i != _panels.Count; i++)
             {
