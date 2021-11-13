@@ -162,13 +162,10 @@ namespace MudBlazor
             get => _activePanelIndex;
             set
             {
-                if (_activePanelIndex != value)
-                {
-                    _activePanelIndex = value;
-                    if (_isRendered)
-                        ActivePanel = _panels[_activePanelIndex];
-                    ActivePanelIndexChanged.InvokeAsync(value);
-                }
+                _activePanelIndex = value;
+                if (_isRendered)
+                    ActivePanel = _panels[_activePanelIndex];
+                ActivePanelIndexChanged.InvokeAsync(value);
             }
         }
 
