@@ -1,0 +1,100 @@
+﻿@namespace MudBlazor.UnitTests.TestComponents
+@using System
+
+<MudForm>
+	<MudSwitch T="bool" @bind-Checked="@_isCentered" Label="Centered Tabs"/>
+	<MudSwitch T="bool" @bind-Checked="@_isEnableRepositioning" Label="Enable repositioning"/>
+	<MudSwitch T="bool" @bind-Checked="@KeepPanelsAlive" Label="Keep Tabs Alive"/>
+
+	<MudRadioGroup @bind-SelectedOption="@_position">
+		<MudRadio Option="@(Position.Bottom)">Bottom</MudRadio>
+		<MudRadio Option="@(Position.Center)">Center</MudRadio>
+		<MudRadio Option="@(Position.Top)">Top</MudRadio>
+		<MudRadio Option="@(Position.Left)">Left</MudRadio>
+		<MudRadio Option="@(Position.Right)">Right</MudRadio>
+		<MudRadio Option="@(Position.Start)">Start</MudRadio>
+		<MudRadio Option="@(Position.End)">End</MudRadio>
+	</MudRadioGroup>
+</MudForm>
+
+<MudDynamicTabs
+		CloseIconClass="my-close-icon-class" CloseTab="OnCloseClicked"
+		AddIconClass="my-add-icon-class" AddTab="OnAddClicked"
+		Centered="@_isCentered"
+		Position="@_position"
+        KeepPanelsAlive="@KeepPanelsAlive"
+		EnableRepositioning="@_isEnableRepositioning"
+>
+	@foreach(var panel in Panels)
+	{
+		<MudTabPanel Text="@panel.Text" ID="@panel.ID" @key=panel.ID>
+            <RepositionTabsPanel PanelName="@panel.Text"
+                                 FirstRender="@((x) => _firstRenders.Add(x))"
+                                 OnDispose="@((x) => _disposedPanels.Add(x))"/>
+		</MudTabPanel>
+	}
+</MudDynamicTabs>
+
+<p id="first-renders">
+    @foreach (var firstRender in _firstRenders)
+    {
+        @firstRender<br />
+    }
+</p>
+
+<p id="disposed-panels">
+    @foreach (var panel in _disposedPanels)
+    {
+        @panel<br/>
+    }
+</p>
+
+@code {
+    [Parameter]
+    public List<(object ID, string Text)> Panels { get; set; } = new List<(object, string)>();
+
+    [Parameter]
+    public bool KeepPanelsAlive { get; set; } = false;
+
+    public static string __description__ = @"Should be able to reposition tabs
+    after adding/deleting tabs and
+    changing positions (centered, top,
+    left, etc).";
+
+    bool _isCentered = false;
+    bool _isEnableRepositioning = true;
+
+    Position _position { get; set; } = Position.Top;
+    List<string> _firstRenders = new List<string>();
+    List<string> _subsequentRenders = new List<string>();
+    List<string> _disposedPanels = new List<string>();
+
+    public Int32 AddClickCounter { get; private set; }
+
+    protected override void OnInitialized()
+    {
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        AddClickCounter = Panels.Count;
+    }
+
+    public async Task AddPanel()
+    {
+        Panels.Add((++AddClickCounter, $"Panel {AddClickCounter}"));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAddClicked()
+    {
+        InvokeAsync(() => AddPanel());
+    }
+
+    private void OnCloseClicked(MudTabPanel panel)
+    {
+        Panels.Remove((panel.ID, panel.Text));
+	}
+}
