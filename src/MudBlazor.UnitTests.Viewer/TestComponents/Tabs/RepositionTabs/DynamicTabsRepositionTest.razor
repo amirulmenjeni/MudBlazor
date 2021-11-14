@@ -25,7 +25,7 @@
         KeepPanelsAlive="@_isKeepPanelsAlive"
 		EnableRepositioning="@_isEnableRepositioning"
 >
-	@foreach(var panel in _panels)
+	@foreach(var panel in Panels)
 	{
 		<MudTabPanel Text="@panel.Text" ID="@panel.ID" @key=panel.ID>
             <RepositionTabsPanel PanelName="@panel.Text" FirstRender="@((x) => _firstRenders.Add(x))"/>
@@ -41,6 +41,8 @@
 </p>
 
 @code {
+    [Parameter]
+    public List<(object ID, string Text)> Panels { get; set; } = new List<(object, string)>();
 
     public static string __description__ = @"Should be able to reposition tabs
     after adding/deleting tabs and
@@ -52,25 +54,34 @@
     bool _isKeepPanelsAlive = false;
 
     Position _position { get; set; } = Position.Top;
-    List<(int ID, string Text)> _panels = new List<(int, string)>();
     List<string> _firstRenders = new List<string>();
 
     public Int32 AddClickCounter { get; private set; }
 
     protected override void OnInitialized()
     {
-        _panels = new List<(int, string)>() { (0, "Panel 0"), (1, "Panel 1"), (2, "Panel 2") };
-        AddClickCounter = _panels.Count;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        AddClickCounter = Panels.Count;
+    }
+
+    public async Task AddPanel()
+    {
+        Panels.Add((++AddClickCounter, $"Panel {AddClickCounter}"));
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OnAddClicked()
     {
-        _panels.Add((++AddClickCounter, $"Panel {AddClickCounter}"));
+        InvokeAsync(() => AddPanel());
     }
 
     private void OnCloseClicked(MudTabPanel panel)
     {
-        Console.WriteLine($"Closing {panel.Text}");
-        _panels.Remove(((int)panel.ID, panel.Text));
+        Panels.Remove((panel.ID, panel.Text));
 	}
 }

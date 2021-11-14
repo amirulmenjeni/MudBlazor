@@ -1036,6 +1036,82 @@ namespace MudBlazor.UnitTests.Components
         }
 
         /// <summary>
+        /// 1. Add 5 panels, named "Panel 1", "Panel 2", up to "Panel 5"
+        /// 2. Remove non-prime numbers (i.e. leaving 1, 2, 3, 5)
+        /// 3. Move panels so that the prime numbers are in reverse order (i.e., 5, 3, 2, 1)
+        /// 4. Add another 5, from "Panel 6" to "Panel 10"
+        /// 5. Remove non-prime numbers (i.e. leaving 7)
+        /// 5. Move panels so that the prime numbers are in reverse order (i.e., 7, 5, 3, 2, 1)
+        /// </summary>
+        [Test]
+        public async Task ReorderTabs_SortAddRemove_ShouldOnlyPrimeNumberAndReverseOrder()
+        {
+            Context.Services.Add(new ServiceDescriptor(typeof(IResizeObserver), new MockResizeObserver()));
+
+            var comp = Context.RenderComponent<DynamicTabsRepositionTest>();
+            Console.WriteLine(comp.Markup);
+
+            // Add panels 1 to 5.
+            await PerformActions(comp, new Action[]
+            {
+                new Action(Name: "add", For: "", To: ""),
+                new Action(Name: "add", For: "", To: ""),
+                new Action(Name: "add", For: "", To: ""),
+                new Action(Name: "add", For: "", To: ""),
+                new Action(Name: "add", For: "", To: ""),
+            });
+
+            // Remove non-primes.
+            await PerformActions(comp, new Action[]
+            {
+                new Action(Name: "remove", For: "Panel 4", To: ""),
+            });
+
+            // Reorder
+            await PerformActions(comp, new Action[]
+            {
+                // From: 1 2 3 5
+                new Action("move", "Panel 2", "Panel 1"), // To: 2 1 3 5
+                new Action("move", "Panel 3", "Panel 5"), // To: 2 1 5 3
+                new Action("move", "Panel 5", "Panel 2"), // To: 5 2 1 3
+                new Action("move", "Panel 3", "Panel 2"), // To: 5 3 2 1
+            });
+
+            // Add another 5 panels
+            await PerformActions(comp, new Action[]
+            {
+                new Action(Name: "add", For: "",  To: ""),
+                new Action(Name: "add", For: "",  To: ""),
+                new Action(Name: "add", For: "",  To: ""),
+                new Action(Name: "add", For: "",  To: ""),
+                new Action(Name: "add", For: "", To: ""),
+            });
+
+            // Remove non-primes.
+            await PerformActions(comp, new Action[]
+            {
+                new Action("remove", "Panel 6",  ""),
+                new Action("remove", "Panel 8",  ""),
+                new Action("remove", "Panel 9",  ""),
+                new Action("remove", "Panel 10", ""),
+            });
+
+            // Reorder
+            await PerformActions(comp, new Action[]
+            {
+                // From: 5 3 2 1 7
+                new Action("move", "Panel 7", "Panel 5"), // To: 7 5 3 2 1
+            });
+
+            var resultingPanels = comp.FindAll(".mud-tab");
+            resultingPanels[0].TrimmedText().Should().Contain("Panel 7");
+            resultingPanels[1].TrimmedText().Should().Contain("Panel 5");
+            resultingPanels[2].TrimmedText().Should().Contain("Panel 3");
+            resultingPanels[3].TrimmedText().Should().Contain("Panel 2");
+            resultingPanels[4].TrimmedText().Should().Contain("Panel 1");
+        }
+
+        /// <summary>
         ///  Depending on the DisableSliderAnimation parameter, it should toggle the transition style attribute
         /// </summary>
         [Test]
@@ -1096,6 +1172,103 @@ namespace MudBlazor.UnitTests.Components
             var value = double.Parse(substring, CultureInfo.InvariantCulture);
 
             return value;
+        }
+
+        private record Action(string Name, string For, string To);
+
+        /// <summary>
+        /// Run a series of actions (add, remove, move) for the panels in <c>DynamicTabsRepositionTest</c>.
+        /// </summary>
+        /// <param name="comp"><c>DynamicTabRepositionTest</c> component</param>
+        /// <param name="actions">The array of <c>Action</c>s to run.</param>
+        private static async Task PerformActions(IRenderedComponent<DynamicTabsRepositionTest> comp, Action[] actions)
+        {
+            Console.WriteLine("Performing actions:");
+
+            foreach (var action in actions)
+            {
+                // Should be:
+                //   1. Number of panels decreased by 1
+                //   2. The panel has been removed successfully
+                if (action.Name.Equals("remove"))
+                {
+                    Console.WriteLine($"- Removing {action.For}");
+
+                    var panelsCount = comp.FindAll(".mud-tab").Count;
+
+                    var panel  = comp.FindAll(".mud-tab")
+                                     .FirstOrDefault(e => e.TextContent.Contains(action.For));
+
+                    panel.QuerySelector("button").Click();
+
+                    comp.FindAll(".mud-tab").Count.Should().Be(panelsCount - 1);
+                    comp.FindAll(".mud-tab").FirstOrDefault(e => e.TextContent.Contains(action.For)).Should().Be(null);
+
+                }
+                // Should be:
+                //   1. Number of panels increaseed by 1
+                //   2. The panel has been added successfully
+                else if (action.Name.Equals("add"))
+                {
+                    Console.WriteLine($"- Adding new panel");
+
+                    var panelsCount = comp.FindAll(".mud-tab").Count;
+
+                    await comp.Instance.AddPanel();
+
+                    comp.FindAll(".mud-tab").Count.Should().Be(panelsCount + 1);
+                }
+                // Should be;
+                //   1. Number of panels stays the same
+                //   2. The index of the panel is one before or one after the
+                //      target index, depending on the source panel's relative
+                //      position from the target destination: If the source
+                //      panel is on the right side of the destination panel,
+                //      after the move operation it should land to the left of
+                //      the destination panel, and vice versa.
+                else if (action.Name.Equals("move"))
+                {
+                    Console.WriteLine($"- Moving {action.For} to {action.To}");
+
+                    var initSrcIndex = comp.FindAll(".mud-tab").ToList().FindIndex(e => e.TextContent.Contains(action.For));
+                    var initDstIndex = comp.FindAll(".mud-tab").ToList().FindIndex(e => e.TextContent.Contains(action.To));
+
+                    // Ensure indexes are found.
+                    initSrcIndex.Should().BeGreaterThanOrEqualTo(0);
+                    initDstIndex.Should().BeGreaterThanOrEqualTo(0);
+
+                    var panelsCount = comp.FindAll(".mud-tab").Count;
+
+                    var panelFrom = comp.FindAll(".mud-tab").FirstOrDefault(e => e.TextContent.Contains(action.For));
+                    panelFrom.DragStart();
+
+                    var panelTo = comp.FindAll(".mud-tab").FirstOrDefault(e => e.TextContent.Contains(action.To));
+                    panelTo.DragEnter();
+
+                    panelTo = comp.FindAll(".mud-tab").FirstOrDefault(e => e.TextContent.Contains(action.To));
+                    panelTo.Drop();
+
+                    // Number of panels shouldn't change after a move operation.
+                    comp.FindAll(".mud-tab").Count.Should().Be(panelsCount);
+
+                    // Panels index after move operation.
+                    var srcIndex = comp.FindAll(".mud-tab").ToList().FindIndex(e => e.TextContent.Contains(action.For));
+                    var dstIndex = comp.FindAll(".mud-tab").ToList().FindIndex(e => e.TextContent.Contains(action.To));
+
+                    // Ensure indexes are found.
+                    srcIndex.Should().BeGreaterThanOrEqualTo(0);
+                    dstIndex.Should().BeGreaterThanOrEqualTo(0);
+
+                    if (initSrcIndex < initDstIndex)
+                    {
+                        srcIndex.Should().BeGreaterThan(dstIndex);
+                    }
+                    else if (initSrcIndex > initDstIndex)
+                    {
+                        srcIndex.Should().BeLessThan(dstIndex);
+                    }
+                }
+            }
         }
 
         #endregion
