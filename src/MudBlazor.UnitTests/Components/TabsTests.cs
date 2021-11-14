@@ -1261,11 +1261,11 @@ namespace MudBlazor.UnitTests.Components
 
                     if (initSrcIndex < initDstIndex)
                     {
-                        srcIndex.Should().BeGreaterThan(dstIndex);
+                        srcIndex.Should().Be(dstIndex + 1);
                     }
                     else if (initSrcIndex > initDstIndex)
                     {
-                        srcIndex.Should().BeLessThan(dstIndex);
+                        srcIndex.Should().Be(dstIndex - 1);
                     }
                 }
             }
