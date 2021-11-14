@@ -5,9 +5,7 @@
 @if (Parent?.KeepPanelsAlive == true)
 {
     <div @attributes="UserAttributes" class="@Class" style="display:@(Parent?.ActivePanel == this ? "contents" : "none");@Style">
-        <MudTabPanelContent MudTab=@Parent
-                            Panel=@this
-                            Render=@_shouldRender
+        <MudTabPanelContent RenderContent=@_shouldRender
                             AfterRender=@(() => _shouldRender = false)>
             @ChildContent
         </MudTabPanelContent>
@@ -17,9 +15,7 @@ else
 {
     @if (Parent?.ActivePanel == this)
     {
-        <MudTabPanelContent MudTab=@Parent
-                            Panel=@this
-                            Render=@_shouldRender
+        <MudTabPanelContent RenderContent=@_shouldRender
                             AfterRender=@(() => _shouldRender = false)>
             @ChildContent
         </MudTabPanelContent>

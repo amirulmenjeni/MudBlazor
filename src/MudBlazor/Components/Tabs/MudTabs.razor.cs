@@ -165,7 +165,7 @@ namespace MudBlazor
                 _activePanelIndex = value;
                 if (_isRendered)
                 {
-                    InvokeAsync(() => ActivePanel = _panels[_activePanelIndex]);
+                    ActivePanel = _panels[_activePanelIndex];
                     InvokeAsync(_panels[_activePanelIndex].RenderPanel);
                 }
                 ActivePanelIndexChanged.InvokeAsync(value);
@@ -427,8 +427,6 @@ namespace MudBlazor
             if (panel.Index != _dragSrc && _isDragging)
             {
                 MovePanel(_dragSrc, panel.Index);
-
-                InvokeAsync(panel.RenderPanel);
 
                 Rerender();
                 StateHasChanged();

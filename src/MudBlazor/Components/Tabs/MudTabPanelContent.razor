@@ -1,26 +1,10 @@
 ﻿@namespace MudBlazor
 @inherits MudComponentBase
 
-@if (MudTab?.KeepPanelsAlive == true)
-{
-    <div @attributes="UserAttributes" class="@Class" style="display:@(MudTab?.ActivePanel == Panel ? "contents" : "none");@Style">
-        @ChildContent
-    </div>
-}
-else
-{
-    @if (MudTab?.ActivePanel == Panel)
-    {
-        @ChildContent
-    }
-}
+@ChildContent
 
 @code {
-    [Parameter] public MudTabs MudTab { get; set; }
-
-    [Parameter] public MudTabPanel Panel { get; set; }
-
-    [Parameter] public bool Render { get; set; }
+    [Parameter] public bool RenderContent { get; set; }
 
     [Parameter] public EventCallback AfterRender { get; set; }
 
@@ -34,6 +18,6 @@ else
 
     protected override bool ShouldRender()
     {
-        return Render;
+        return RenderContent;
     }
 }
