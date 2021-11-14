@@ -27,7 +27,7 @@
 >
 	@foreach(var panel in _panels)
 	{
-		<MudTabPanel Text="@panel.Text" ID="@panel.ID">
+		<MudTabPanel Text="@panel.Text" ID="@panel.ID" @key=panel.ID>
             <RepositionTabsPanel PanelName="@panel.Text" FirstRender="@((x) => _firstRenders.Add(x))"/>
 		</MudTabPanel>
 	}
