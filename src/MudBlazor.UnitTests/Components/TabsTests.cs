@@ -105,7 +105,7 @@ namespace MudBlazor.UnitTests.Components
             comp.FindAll("div.mud-tabs-panels > div")[0].GetAttribute("style").Should().Be("display:none;");
             comp.FindAll("div.mud-tabs-panels > div")[1].GetAttribute("style").Should().Be("display:contents;");
             comp.FindAll("div.mud-tabs-panels > div")[2].GetAttribute("style").Should().Be("display:none;");
-            // click second button twice and show button click counters. the click of the first button should still be evident 
+            // click second button twice and show button click counters. the click of the first button should still be evident
             comp.FindAll("button")[1].Click();
             comp.FindAll("button")[1].Click();
             comp.FindAll("button")[0].TrimmedText().Should().Be("Panel 1=1");
@@ -1109,6 +1109,72 @@ namespace MudBlazor.UnitTests.Components
             resultingPanels[2].TrimmedText().Should().Contain("Panel 3");
             resultingPanels[3].TrimmedText().Should().Contain("Panel 2");
             resultingPanels[4].TrimmedText().Should().Contain("Panel 1");
+        }
+
+        /// <summary>
+        /// Moving a panel should not dispose the panel.
+        ///
+        /// This is done by checking the panel's element reference, whether they stay the same after moving, and adding/remove new nodes.
+        /// </summary>
+        [Test]
+        public async Task ReorderTabs_MoveTab_KeepAlive_ShouldNotRenderAllPanels()
+        {
+
+            Context.Services.Add(new ServiceDescriptor(typeof(IResizeObserver), new MockResizeObserver()));
+
+            var comp = Context.RenderComponent<DynamicTabsRepositionTest>(parameters =>
+                parameters
+                    .Add(p => p.Panels, new List<(object ID, string Text)>
+                    {
+                        (0, "Panel 1"),
+                        (1, "Panel 2"),
+                        (2, "Panel 3"),
+                    })
+                    .Add(p => p.KeepPanelsAlive, true)
+            );
+
+            Console.WriteLine(comp.Markup);
+
+            comp.FindAll(".mud-tab").Count.Should().Be(3);
+            comp.FindAll("button > span.mud-button-label").Count.Should().Be(3);
+
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/>Render Panel 2</br>Render Panel 3<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\"></p>");
+
+            // Click Panel 1 once.
+            comp.FindAll("button > span.mud-button-label")[0].Click();
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=1");
+
+            // Go to Panel 2 and click twice.
+            comp.FindAll(".mud-tab")[1].Click();
+            comp.FindAll("button > span.mud-button-label")[1].Click();
+            comp.FindAll("button > span.mud-button-label")[1].Click();
+            comp.FindAll("button > span.mud-button-label")[1].TrimmedText().Should().Contain("Panel 2=2");
+
+            // Go to Panel 3 and click three times.
+            comp.FindAll(".mud-tab")[2].Click();
+            comp.FindAll("button > span.mud-button-label")[2].Click();
+            comp.FindAll("button > span.mud-button-label")[2].Click();
+            comp.FindAll("button > span.mud-button-label")[2].Click();
+            comp.FindAll("button > span.mud-button-label")[2].TrimmedText().Should().Contain("Panel 3=3");
+
+            // Declare actions to move Panel 1 to Panel 2's position.
+            await PerformActions(comp, new Action[]
+            {
+                new Action("move", "Panel 1", "Panel 2"),
+            });
+
+            // Reorder succesful.
+            comp.FindAll(".mud-tab")[0].TrimmedText().Should().Contain("Panel 2");
+            comp.FindAll(".mud-tab")[1].TrimmedText().Should().Contain("Panel 1");
+
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/>Render Panel 2</br>Render Panel 3<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\"></p>");
+
+            // Contents still correct.
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=1");
+            comp.FindAll("button > span.mud-button-label")[1].TrimmedText().Should().Contain("Panel 2=2");
+            comp.FindAll("button > span.mud-button-label")[2].TrimmedText().Should().Contain("Panel 3=3");
         }
 
         /// <summary>
