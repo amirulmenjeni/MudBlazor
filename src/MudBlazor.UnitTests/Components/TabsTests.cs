@@ -1178,6 +1178,106 @@ namespace MudBlazor.UnitTests.Components
             comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=1");
             comp.FindAll("button > span.mud-button-label")[1].TrimmedText().Should().Contain("Panel 2=2");
             comp.FindAll("button > span.mud-button-label")[2].TrimmedText().Should().Contain("Panel 3=3");
+
+            // Declare actions to move Panel 3 to the left-most position.
+            await PerformActions(comp, new Action[]
+            {
+                new Action("move", "Panel 3", "Panel 2"),
+            });
+
+            // Reorder successful.
+            comp.FindAll(".mud-tab")[0].TrimmedText().Should().Contain("Panel 3");
+            comp.FindAll(".mud-tab")[1].TrimmedText().Should().Contain("Panel 2");
+            comp.FindAll(".mud-tab")[2].TrimmedText().Should().Contain("Panel 1");
+
+            // No rerender of panels due to KeepPanelsAlive.
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/>Render Panel 2</br>Render Panel 3<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\"></p>");
+
+            // Contents still correct.
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=1");
+            comp.FindAll("button > span.mud-button-label")[1].TrimmedText().Should().Contain("Panel 2=2");
+            comp.FindAll("button > span.mud-button-label")[2].TrimmedText().Should().Contain("Panel 3=3");
+        }
+
+        [Test]
+        public async Task ReorderTabs_NotKeepAlive_ShouldNotRenderAllPanels()
+        {
+            Context.Services.Add(new ServiceDescriptor(typeof(IResizeObserver), new MockResizeObserver()));
+
+            var comp = Context.RenderComponent<DynamicTabsRepositionTest>(parameters =>
+                parameters
+                    .Add(p => p.Panels, new List<(object ID, string Text)>
+                    {
+                        (0, "Panel 1"),
+                        (1, "Panel 2"),
+                        (2, "Panel 3"),
+                    })
+                    .Add(p => p.KeepPanelsAlive, false)
+            );
+
+            Console.WriteLine(comp.Markup);
+
+            comp.FindAll(".mud-tab").Count.Should().Be(3);
+            comp.FindAll("button > span.mud-button-label").Count.Should().Be(1);
+
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\"></p>");
+
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=0");
+
+            // Click Panel 1 button once.
+            comp.FindAll("button > span.mud-button-label")[0].Click();
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=1");
+
+            // Move Panel 1 to the right of Panel 2.
+            await PerformActions(comp, new Action[]
+            {
+                new Action("move", "Panel 1", "Panel 2"),
+            });
+
+            comp.FindAll(".mud-tab")[0].TrimmedText().Should().Contain("Panel 2");
+            comp.FindAll(".mud-tab")[1].TrimmedText().Should().Contain("Panel 1");
+            comp.FindAll(".mud-tab")[2].TrimmedText().Should().Contain("Panel 3");
+
+            // Moving Panel 1 to the right of Panel 2 should not render
+            // contents of Panel 2 or Panel 3.
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\"></p>");
+
+            // And Panel 1 should not be destroyed and re-created.
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 1=1");
+
+            // Switch to Panel 3.
+            comp.FindAll(".mud-tab")[2].Click();
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 3=0");
+
+            // Panel 1 should be disposed, and Panel 3 rendered.
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/>Render Panel 3<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\">Disposed Panel 1<br/></p>");
+
+            comp.FindAll("button > span.mud-button-label")[0].Click();
+            comp.FindAll("button > span.mud-button-label")[0].Click();
+            comp.FindAll("button > span.mud-button-label")[0].Click();
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 3=3");
+
+            // Move Panel 3 to the left of Panel 1.
+            await PerformActions(comp, new Action[]
+            {
+                new Action("move", "Panel 3", "Panel 1"),
+            });
+
+            comp.FindAll(".mud-tab")[0].TrimmedText().Should().Contain("Panel 2");
+            comp.FindAll(".mud-tab")[1].TrimmedText().Should().Contain("Panel 3");
+            comp.FindAll(".mud-tab")[2].TrimmedText().Should().Contain("Panel 1");
+
+            // Moving Panel 3 to the left of Panel 1 should not render contents
+            // of Panel 2 or Panel 1.
+            comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/>Render Panel 3<br/></p>");
+            comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\">Disposed Panel 1<br/></p>");
+
+            // And Panel 3 should not be destroyed and re-created.
+            comp.FindAll("button > span.mud-button-label")[0].TrimmedText().Should().Contain("Panel 3=3");
         }
 
         /// <summary>
