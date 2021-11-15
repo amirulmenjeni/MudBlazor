@@ -28,15 +28,24 @@
 	@foreach(var panel in Panels)
 	{
 		<MudTabPanel Text="@panel.Text" ID="@panel.ID" @key=panel.ID>
-            <RepositionTabsPanel PanelName="@panel.Text" FirstRender="@((x) => _firstRenders.Add(x))"/>
+            <RepositionTabsPanel PanelName="@panel.Text"
+                                 FirstRender="@((x) => _firstRenders.Add(x))"
+                                 OnDispose="@((x) => _disposedPanels.Add(x))"/>
 		</MudTabPanel>
 	}
 </MudDynamicTabs>
 
-<p>
+<p id="first-renders">
     @foreach (var firstRender in _firstRenders)
     {
         @firstRender<br />
+    }
+</p>
+
+<p id="disposed-panels">
+    @foreach (var panel in _disposedPanels)
+    {
+        @panel<br/>
     }
 </p>
 
@@ -55,6 +64,8 @@
 
     Position _position { get; set; } = Position.Top;
     List<string> _firstRenders = new List<string>();
+    List<string> _subsequentRenders = new List<string>();
+    List<string> _disposedPanels = new List<string>();
 
     public Int32 AddClickCounter { get; private set; }
 
