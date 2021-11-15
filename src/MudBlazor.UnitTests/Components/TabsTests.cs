@@ -1112,12 +1112,13 @@ namespace MudBlazor.UnitTests.Components
         }
 
         /// <summary>
-        /// Moving a panel should not dispose the panel.
+        /// Moving a panel should not cause the rendering all the panels when
+        /// the <c>KeepPanelsAlive</c> parameter is set to <c>true</c>.
         ///
-        /// This is done by checking the panel's element reference, whether they stay the same after moving, and adding/remove new nodes.
+        /// The effect of <c>KeepPanelsAlive</c> should work as expected even after moving tabs.
         /// </summary>
         [Test]
-        public async Task ReorderTabs_MoveTab_KeepAlive_ShouldNotRenderAllPanels()
+        public async Task ReorderTabs_KeepAlive_ShouldNotRenderAllPanels()
         {
 
             Context.Services.Add(new ServiceDescriptor(typeof(IResizeObserver), new MockResizeObserver()));
