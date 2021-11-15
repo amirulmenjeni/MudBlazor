@@ -1168,7 +1168,9 @@ namespace MudBlazor.UnitTests.Components
             // Reorder succesful.
             comp.FindAll(".mud-tab")[0].TrimmedText().Should().Contain("Panel 2");
             comp.FindAll(".mud-tab")[1].TrimmedText().Should().Contain("Panel 1");
+            comp.FindAll(".mud-tab")[2].TrimmedText().Should().Contain("Panel 3");
 
+            // No rerender of panels due to KeepPanelsAlive.
             comp.FindAll("#first-renders").MarkupMatches("<p id=\"first-renders\">Render Panel 1<br/>Render Panel 2</br>Render Panel 3<br/></p>");
             comp.FindAll("#disposed-panels").MarkupMatches("<p id=\"disposed-panels\"></p>");
 
