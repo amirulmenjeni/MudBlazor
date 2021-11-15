@@ -4,7 +4,7 @@
 <MudForm>
 	<MudSwitch T="bool" @bind-Checked="@_isCentered" Label="Centered Tabs"/>
 	<MudSwitch T="bool" @bind-Checked="@_isEnableRepositioning" Label="Enable repositioning"/>
-	<MudSwitch T="bool" @bind-Checked="@_isKeepPanelsAlive" Label="Keep Tabs Alive"/>
+	<MudSwitch T="bool" @bind-Checked="@KeepPanelsAlive" Label="Keep Tabs Alive"/>
 
 	<MudRadioGroup @bind-SelectedOption="@_position">
 		<MudRadio Option="@(Position.Bottom)">Bottom</MudRadio>
@@ -22,7 +22,7 @@
 		AddIconClass="my-add-icon-class" AddTab="OnAddClicked"
 		Centered="@_isCentered"
 		Position="@_position"
-        KeepPanelsAlive="@_isKeepPanelsAlive"
+        KeepPanelsAlive="@KeepPanelsAlive"
 		EnableRepositioning="@_isEnableRepositioning"
 >
 	@foreach(var panel in Panels)
@@ -53,6 +53,9 @@
     [Parameter]
     public List<(object ID, string Text)> Panels { get; set; } = new List<(object, string)>();
 
+    [Parameter]
+    public bool KeepPanelsAlive { get; set; } = false;
+
     public static string __description__ = @"Should be able to reposition tabs
     after adding/deleting tabs and
     changing positions (centered, top,
@@ -60,7 +63,6 @@
 
     bool _isCentered = false;
     bool _isEnableRepositioning = true;
-    bool _isKeepPanelsAlive = false;
 
     Position _position { get; set; } = Position.Top;
     List<string> _firstRenders = new List<string>();
